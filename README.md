@@ -32,7 +32,7 @@ npm run dev
 Clone the repository and open its folder:
 
 ```bash
-git clone YOUR_REPOSITORY_URL
+git clone https://github.com/Saliprued/daily-task-tracker.git
 cd daily-task-tracker
 ```
 
