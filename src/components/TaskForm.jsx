@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import { isValidTask } from "../validation.mjs";
 
 export default function TaskForm({ onAddTask, onClose }) {
   const formId = useId();
@@ -9,26 +10,22 @@ export default function TaskForm({ onAddTask, onClose }) {
   const [error, setError] = useState("");
  
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
-    if (!title.trim() || !topic.trim() || Number(minutes) <= 0) {
+    if (!isValidTask(title, topic, minutes)) {
       setError("Enter an activity, topic, and time greater than zero.");
       return;
     }
 
-    onAddTask({
+    setError("");
+
+    await onAddTask({
       title: title.trim(),
       minutes: Number(minutes),
       topic: topic.trim(),
-      priority: priority,
+      priority,
     });
-
-    setTitle("");
-    setMinutes("");
-    setTopic("");
-    setPriority("Medium");
-    setError("");
   }
 
   return (
