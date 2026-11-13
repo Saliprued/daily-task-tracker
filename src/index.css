@@ -36,7 +36,7 @@ button:hover { background: #125486; }
 .task-label span { overflow-wrap: anywhere; }
 .task-modal-close {float: right;padding: 6px 10px;border: 1px solid #a9b7c4;border-radius: 6px;background: white;color: #52657a;font: inherit;cursor: pointer; }
 .task-card.completed .task-label span { color: #6b7785; text-decoration: line-through; }
-.delete-button { background: #fff; color: #b42318; border: 1px solid #f1b6b0; padding: 8px 10px; }
+.delete-button { background: none; color: #b42318; border: none; border-radius: 8px; padding: 6px 10px; cursor: pointer; }
 .delete-button:hover { background: #fff3f2; }
 .empty-state { color: #526274; padding: 20px 0; }
 .priority { padding: 2px 8px; border-radius: 12px; font-weight: 600;}

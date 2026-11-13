@@ -1,103 +1,83 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Trash2 } from "lucide-react";
 import TaskForm from "./components/TaskForm.jsx";
 import TaskList from "./components/TaskList.jsx";
-
-const starterDays = [
-  {
-    id: crypto.randomUUID(),
-    title: "Day 1",
-    tasks: [
-      {
-        id: crypto.randomUUID(),
-        title: "Read the Module 2 lesson",
-        description: "Review components and props",
-        minutes: 30,
-        topic: "Study",
-        completed: false,
-      },
-    ],
-  },
-];
+import { request } from "./api.js";
 
 export default function App() {
-  const [days, setDays] = useState(starterDays);
+  const [days, setDays] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [openFormDayId, setOpenFormDayId] = useState(null);
+  const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
 
-  function addDay() {
-  setDays((currentDays) => {
-    const nextNumber = [1, 2, 3, 4, 5, 6, 7].find(
-      (number) =>
-        !currentDays.some((day) => day.title === `Day ${number}`),
-    );
+  useEffect(() => {
+  request("/days")
+    .then(setDays)
+    .catch(() => setLoadError("Could not load the planner. Please try again."))
+    .finally(() => setLoading(false));
+}, []);
 
-    if (!nextNumber) return currentDays;
+  async function saveChange(path, method, data) {
+    setError("");
 
-    return [
-      ...currentDays,
-      { id: crypto.randomUUID(), title: `Day ${nextNumber}`, tasks: [],},
-    ];
-  });
-}
+    try {
+      setDays(await request(path, method, data));
+      return true;
+    } catch (error) {
+      setError(error.message);
+      return false;
+    }
+  }
 
-  function addTask(dayId, taskDetails) {
-    setDays((currentDays) =>
-      currentDays.map((day) =>
-        day.id === dayId ? {
-              ...day,
-              tasks: [
-                ...day.tasks,
-                { id: crypto.randomUUID(), ...taskDetails,  completed: false, },
-              ],
-            }: day,
-      ),
+  async function addDay() {
+    await saveChange("/days", "POST");
+  }
+
+  async function toggleTask(dayId, taskId) {
+    const day = days.find((day) => day.id === dayId);
+    const task = day.tasks.find((task) => task.id === taskId);
+
+    await saveChange(
+      `/days/${dayId}/tasks/${taskId}`,
+      "PATCH",
+      { completed: !task.completed },
     );
   }
 
-  function toggleTask(dayId, taskId) {
-    setDays((currentDays) =>
-      currentDays.map((day) =>
-        day.id === dayId ? {
-              ...day,
-              tasks: day.tasks.map((task) =>
-                task.id === taskId
-                  ? { ...task, completed: !task.completed }: task,
-              ),
-            }: day,
-      ),
-    );
-  }
-
-  function updateTaskTime(dayId, taskId, minutes) {
-  setDays((currentDays) =>
-    currentDays.map((day) =>
-      day.id === dayId ? {
-            ...day,
-            tasks: day.tasks.map((task) =>
-              task.id === taskId ? { ...task, minutes } : task,
-            ),
-          }: day,
-    ),
+  async function updateTaskTime(dayId, taskId, minutes) {
+   await saveChange(
+      `/days/${dayId}/tasks/${taskId}`,
+      "PATCH",
+      { minutes },
   );
-}
+  }
 
-  function deleteTask(dayId, taskId) {
-    setDays((currentDays) =>
-      currentDays.map((day) =>
-        day.id === dayId ? {
-              ...day,
-              tasks: day.tasks.filter((task) => task.id !== taskId),
-            } : day,
-      ),
+  async function deleteTask(dayId, taskId) {
+   await saveChange(
+      `/days/${dayId}/tasks/${taskId}`,
+      "DELETE",
     );
   }
 
-  function deleteDay(dayId) {
-    setDays((currentDays) =>
-      currentDays.filter((day) => day.id !== dayId),
-    );
+  async function deleteDay(dayId) {
+    const saved = await saveChange(`/days/${dayId}`, "DELETE");
 
-    if (openFormDayId === dayId) {
-    setOpenFormDayId(null);
+    if (saved && openFormDayId === dayId) {
+      setOpenFormDayId(null);
+    }
+  }
+
+  async function retryLoad() {
+    setLoading(true);
+    setLoadError("");
+
+    try {
+      setDays(await request("/days"));
+    } catch {
+      setLoadError("Could not load the planner. Please try again.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -114,10 +94,21 @@ export default function App() {
           + Add day
         </button>
 
-        {days.length === 0 && (
-         <p className="empty-state">
-           No tasks yet. Add a day, then add your first task.
-         </p>
+        {loading && <p>Loading...</p>}
+
+        {error && <p className="form-error" role="alert">{error}</p>}
+
+        {loadError && (
+          <div role="alert">
+            <p>{loadError}</p>
+            <button type="button" onClick={retryLoad}>
+             Retry
+            </button>
+          </div>
+        )}
+
+        {!loading && !loadError && days.length === 0 && (
+          <p className="empty-state">No tasks yet. Add the first one.</p>
         )}
 
         {days.map((day) => {
@@ -137,7 +128,7 @@ export default function App() {
                <button className="delete-button" type="button" 
                   onClick={() => deleteDay(day.id)}
                   aria-label={`Delete ${day.title}`}>
-                  Delete
+                   <Trash2 size={18} />
                </button>
               </div>
 
@@ -150,15 +141,21 @@ export default function App() {
                  <h3>Add task to {day.title}</h3>
 
                  <TaskForm
-                   onAddTask={(taskDetails) => {
-                    addTask(day.id, taskDetails);
-                    setOpenFormDayId(null);
-                  }} 
-                 onClose={() => setOpenFormDayId(null)}
-                 />
+                   onClose={() => setOpenFormDayId(null)}
+                   onAddTask={async (taskDetails) => {
+                     const saved = await saveChange(
+                       `/days/${day.id}/tasks`,
+                       "POST",
+                       taskDetails,
+                   );
+
+                    if (saved) setOpenFormDayId(null);
+                    return saved;
+                   }}
+                  />
                 </div>
               )}
-
+           
               <section className="summary" aria-label={`${day.title} summary`}>
                 <span>{activeCount} active</span>
                 <span>{completedCount} completed</span>

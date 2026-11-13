@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Trash2 } from "lucide-react";
 
 export default function TaskCard({ task, onToggle, onDelete, onUpdateTime, }) { 
   const [editingTime, setEditingTime] = useState(false);
@@ -66,7 +67,7 @@ export default function TaskCard({ task, onToggle, onDelete, onUpdateTime, }) {
         type="button"
         onClick={() => onDelete(task.id)}
       >
-        Delete
+         <Trash2 size={18} />
       </button>
     </li>
   );
